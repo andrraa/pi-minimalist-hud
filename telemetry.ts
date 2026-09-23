@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-export type Tone = "accent" | "success" | "warning";
+export type Tone = "accent" | "success" | "warning" | "error";
 export type Item = { text: string; priority: number; tone: Tone };
 
 /** Skill name from a `read` path pointing at `.../<skill>/SKILL.md`. */
@@ -21,8 +21,10 @@ export function fit(items: Item[], width: number): Item[] {
   return visible;
 }
 
-export function workspace(cwd: string, home = homedir()) {
-  return cwd === home ? "~" : cwd.startsWith(`${home}/`) ? `~/${cwd.slice(home.length + 1)}` : cwd;
+/** Project directory name, for a footer that should not spend 30 columns on a path. */
+export function projectName(cwd: string, home = homedir()) {
+  if (cwd === home) return "~";
+  return cwd.split(/[/\\]/).filter(Boolean).pop() ?? cwd;
 }
 
 type Entry = {
@@ -94,8 +96,7 @@ export function formatDuration(milliseconds: number) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1_000));
   const hours = Math.floor(seconds / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  const remainder = seconds % 60;
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m ${remainder}s`;
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 /** Plan/VIBE from persisted `@narumitw/pi-plan-mode` state, or undefined when that extension never ran. */

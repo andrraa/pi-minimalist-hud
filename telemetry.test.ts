@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, workspace } from "./telemetry.ts";
+import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, projectName, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed } from "./telemetry.ts";
 
 test("aggregates cache usage from assistant messages", () => {
   const usage = { input: 10, cacheRead: 90, output: 5, cacheWrite: 0, totalTokens: 105, cost: { total: 0.25 } };
@@ -29,7 +29,8 @@ test("finds loaded skills and active MCP tools", () => {
 test("formats elapsed session usage", () => {
   assert.equal(sessionStartedAt([{ timestamp: "2026-09-23T10:00:00.000Z" }]), Date.parse("2026-09-23T10:00:00.000Z"));
   assert.equal(formatDuration(3_723_000), "1h 2m");
-  assert.equal(formatDuration(83_000), "1m 23s");
+  assert.equal(formatDuration(83_000), "1m");
+  assert.equal(formatDuration(20_000), "0m");
 });
 
 test("detects latest plan-mode state with VIBE fallback", () => {
@@ -56,10 +57,10 @@ test("fits footer lines by evicting the lowest priority item", () => {
   assert.deepEqual(fit(items, 0).map((item) => item.text), ["high"]);
 });
 
-test("shortens workspace paths and derives context fill", () => {
-  assert.equal(workspace("/Users/me/proj", "/Users/me"), "~/proj");
-  assert.equal(workspace("/Users/me", "/Users/me"), "~");
-  assert.equal(workspace("/tmp/x", "/Users/me"), "/tmp/x");
+test("shortens to a project name and derives context fill", () => {
+  assert.equal(projectName("/Users/me/proj", "/Users/me"), "proj");
+  assert.equal(projectName("/Users/me/", "/Users/me"), "me");
+  assert.equal(projectName("/Users/me", "/Users/me"), "~");
   assert.deepEqual(contextFill(50_000, 200_000), { tokens: 50_000, contextWindow: 200_000, percent: 25 });
   assert.equal(contextFill(1_000, 0), undefined);
 });

@@ -1,7 +1,7 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
-import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, workspace, type Item } from "./telemetry.ts";
+import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, projectName, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, type Item } from "./telemetry.ts";
 
 export default function piHud(pi: ExtensionAPI) {
   const speed = new TokenSpeed();
@@ -67,19 +67,20 @@ export default function piHud(pi: ExtensionAPI) {
 
           const promptTokens = cache.input + cache.cacheRead;
           const fill = model ? contextFill(cache.tokens, model.contextWindow) : undefined;
+          const ctxTone = !fill || fill.percent < 60 ? "success" : fill.percent < 85 ? "warning" : "error";
           const first = fit([
-            { text: `🔢 TOKEN/CACHE ${formatNumber(cache.input)}/${formatNumber(promptTokens)} (${Math.round(cache.percent)}%)`, priority: 95, tone: "accent" },
-            ...(fill ? [{ text: `🧠 CTX ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)`, priority: fill.percent >= 75 ? 115 : 75, tone: fill.percent >= 75 ? "warning" as const : "success" as const }] : []),
-            { text: `🧠 THINK ${pi.getThinkingLevel()}`, priority: 100, tone: "warning" },
-            { text: `${!known ? "❔" : mode ? "🧭" : "✨"} MODE ${!known ? "?" : mode ? "PLAN" : "VIBE"}`, priority: 110, tone: mode ? "accent" : "success" },
-            { text: `⚡ SPEED ${speedText} tok/s`, priority: 80, tone: "success" },
+            { text: `🧭 ${known ? (mode ? "PLAN" : "VIBE") : "?"}`, priority: 110, tone: mode ? "accent" : "success" },
+            { text: `🧠 ${pi.getThinkingLevel()}`, priority: 100, tone: "warning" },
+            ...(fill ? [{ text: `📦 ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)`, priority: fill.percent >= 75 ? 115 : 75, tone: ctxTone as Item["tone"] }] : []),
+            { text: `⚡ ${speedText} tok/s`, priority: 80, tone: "success" },
+            { text: `🔢 ${Math.round(cache.percent)}% cache`, priority: 95, tone: "accent" },
           ], width);
           const second = fit([
-            { text: `📁 ${workspace(ctx.cwd)}${gitBranch ? ` (${gitBranch})` : ""}`, priority: 20, tone: "success" },
-            { text: `💰 $${cache.cost.toFixed(cache.cost < 10 ? 3 : 2)}`, priority: 45, tone: "accent" },
+            { text: `📁 ${projectName(ctx.cwd)}${gitBranch ? ` (${gitBranch})` : ""}`, priority: 20, tone: "success" },
+            { text: `💰 $${cache.cost.toFixed(2)}`, priority: 45, tone: "accent" },
             { text: `🤖 ${model ? `${model.provider}/${model.id}` : "no model"}`, priority: 100, tone: "accent" },
             { text: `🕒 ${formatDuration(Date.now() - startedAt)}`, priority: 60, tone: "success" },
-            { text: `🧩 SKILL ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
+            { text: `🧩 ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
             ...(mcpCount ? [{ text: `🔌 ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
           ], width);
           const renderLine = (items: Item[]) => truncateToWidth(

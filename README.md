@@ -1,10 +1,12 @@
 # pi-minimalist-hud
 
-A compact, two-line telemetry footer for [Pi](https://pi.dev). Everything you need while a session is running — token usage, context fill, cost, token speed, workspace, model, skills, MCP tools — without stealing vertical space.
+A compact, two-line telemetry footer for [Pi](https://pi.dev). Everything you need while a session is running — cache rate, context fill, cost, token speed, workspace, model, skills, MCP tools — without stealing vertical space.
+
+Everything fits in ~90 columns, so at typical terminal widths nothing is dropped.
 
 ```
-🔢 TOKEN/CACHE 1.2M/10.4M (88%)  │  🧠 CTX 42.1k/200k (21%)  │  🧭 MODE PLAN  │  ⚡ SPEED 62 tok/s
-📁 ~/Projects/api (main)  │  💰 $0.418  │  🤖 anthropic/claude-sonnet-4-5  │  🕒 12m 4s  │  🧩 SKILL ponytail
+🔢 88% cache  │  📦 42.1k/200k (21%)  │  🧭 PLAN  │  ⚡ 62 tok/s
+📁 pi-hud (main)  │  💰 $0.42  │  🤖 claude-sonnet-4-5  │  🕒 12m  │  🧩 ponytail  │  🔌 3
 ```
 
 Items whose priority is too low to fit the current terminal width are dropped automatically, so the HUD degrades gracefully instead of wrapping.
@@ -27,14 +29,16 @@ pi --extension ./index.ts
 
 | Item | Meaning |
 | --- | --- |
-| `TOKEN/CACHE` | Uncached prompt tokens / total prompt tokens, with cache-hit rate. `1.2M/10.4M (88%)` means 88% of the prompt was served from cache. |
-| `CTX` | Context-window fill for the active model. Turns warning-colored past 75% — the signal to `/compact`. |
-| `COST` | Accumulated session cost, summed from per-message usage reported by the provider. |
-| `MODE` | `PLAN` / `VIBE`. Reads [`@narumitw/pi-plan-mode`](https://www.npmjs.com/package/@narumitw/pi-plan-mode) state, falling back to that extension's live status. Shows `MODE ?` when plan mode is not installed at all, rather than guessing. |
-| `SPEED` | Rolling output tokens/second over a 2-second window, from streamed deltas. |
-| `WORKSPACE` | `$HOME`-relative working directory, plus the current Git branch. |
-| `SKILL` | Skills whose `SKILL.md` was read through Pi's `read` tool in the active session. |
-| `MCP` | Count of active MCP tools, inferred from tool name and source metadata. |
+| `🔢` | Cache-hit rate — the share of prompt tokens the provider served from cache. `88% cache` is the number that actually varies; raw uncached/total counts are available in `/usage`. |
+| `📦` | Context-window fill for the active model. Turns yellow past 60% and red past 85% — the signal to `/compact`. |
+| `💰` | Accumulated session cost, summed from per-message usage reported by the provider. |
+| `🧭` | `PLAN` / `VIBE`. Reads [`@narumitw/pi-plan-mode`](https://www.npmjs.com/package/@narumitw/pi-plan-mode) state, falling back to that extension's live status. Shows `?` when plan mode is not installed at all, rather than guessing. |
+| `⚡` | Rolling output tokens/second over a 2-second window, from streamed deltas. |
+| `🧠` | Active thinking level. |
+| `📁` | Project directory name plus the current Git branch — not the full path, which does not change and does not fit. |
+| `🕒` | Elapsed session time. |
+| `🧩` | Skills whose `SKILL.md` was read through Pi's `read` tool in the active session. |
+| `🔌` | Count of active MCP tools, inferred from tool names. |
 
 ## Development
 
@@ -48,7 +52,8 @@ Pure logic lives in `telemetry.ts` and is covered by `telemetry.test.ts`. `index
 
 ## Limitations
 
-- The `MCP` count is a heuristic over tool name and source path; a non-MCP tool with `mcp` in its metadata can be counted. It appears only when the count is non-zero.
+- The `🔌` count is a heuristic over tool names; a non-MCP tool whose name contains `mcp` can be counted. It appears only when the count is non-zero.
+- Context fill is derived from the last request's token count, so it reads slightly low mid-stream and corrects as soon as the response's usage arrives.
 - Provider quota windows are deliberately not shown: every provider exposes them differently, and a row that is meaningless or wrong on half the providers costs more attention than it earns. Use `/usage` or the provider's own dashboard when you need it.
 - Token speed is estimated from `chars / 4` until the provider reports real output tokens for the message.
 - `SKILL` reflects skills read in the current session, not every skill installed.
