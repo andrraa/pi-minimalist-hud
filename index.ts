@@ -3,6 +3,9 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, projectName, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, type Item } from "./telemetry.ts";
 
+/** Past this fill, a marker beats a color change - the context is about to be compacted. */
+const CONTEXT_ALERT_PERCENT = 90;
+
 export default function piHud(pi: ExtensionAPI) {
   const speed = new TokenSpeed();
   let cache = { input: 0, cacheRead: 0, cost: 0, tokens: 0, percent: 0 };
@@ -70,7 +73,7 @@ export default function piHud(pi: ExtensionAPI) {
           const first = fit([
             { text: `🧭 ${known ? (mode ? "PLAN" : "VIBE") : "?"}`, priority: 110, tone: mode ? "accent" : "success" },
             { text: `🧠 ${pi.getThinkingLevel()}`, priority: 100, tone: "warning" },
-            ...(fill ? [{ text: `📦 ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)`, priority: fill.percent >= 75 ? 115 : 75, tone: ctxTone as Item["tone"] }] : []),
+            ...(fill ? [{ text: `📦 ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)${fill.percent >= CONTEXT_ALERT_PERCENT ? " !" : ""}`, priority: fill.percent >= 75 ? 115 : 75, tone: ctxTone as Item["tone"] }] : []),
             { text: `⚡ ${speedText} tok/s`, priority: 80, tone: "success" },
             { text: `🔢 ${Math.round(cache.percent)}% cache`, priority: 95, tone: "accent" },
           ], width);
