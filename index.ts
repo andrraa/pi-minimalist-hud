@@ -5,7 +5,7 @@ import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkill
 
 export default function piHud(pi: ExtensionAPI) {
   const speed = new TokenSpeed();
-  let cache = { input: 0, cacheRead: 0, cost: 0, percent: 0 };
+  let cache = { input: 0, cacheRead: 0, cost: 0, tokens: 0, percent: 0 };
   let skills = new Set<string>();
   let startedAt = Date.now();
   let requestRender: (() => void) | undefined;
@@ -57,7 +57,7 @@ export default function piHud(pi: ExtensionAPI) {
           const speedText = speed.value === undefined ? "—" : speed.value < 100 ? speed.value.toFixed(1) : String(Math.round(speed.value));
 
           const promptTokens = cache.input + cache.cacheRead;
-          const fill = contextFill(ctx.getContextUsage(), promptTokens);
+          const fill = model ? contextFill(cache.tokens, model.contextWindow) : undefined;
           const first = fit([
             { text: `🔢 TOKEN/CACHE ${formatNumber(cache.input)}/${formatNumber(promptTokens)} (${Math.round(cache.percent)}%)`, priority: 95, tone: "accent" },
             ...(fill ? [{ text: `🧠 CTX ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)`, priority: fill.percent >= 75 ? 115 : 75, tone: fill.percent >= 75 ? "warning" as const : "success" as const }] : []),
@@ -122,6 +122,7 @@ export default function piHud(pi: ExtensionAPI) {
     cache.input += usage.input;
     cache.cacheRead += usage.cacheRead;
     cache.cost += usage.cost?.total ?? 0;
+    cache.tokens = usage.totalTokens || usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
     const total = cache.input + cache.cacheRead;
     cache.percent = total ? (cache.cacheRead / total) * 100 : 0;
     speed.stop();

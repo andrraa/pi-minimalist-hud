@@ -3,13 +3,13 @@ import test from "node:test";
 import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, workspace } from "./telemetry.ts";
 
 test("aggregates cache usage from assistant messages", () => {
-  const usage = { input: 10, cacheRead: 90, totalTokens: 100, cost: { total: 0.25 } };
+  const usage = { input: 10, cacheRead: 90, output: 5, cacheWrite: 0, totalTokens: 105, cost: { total: 0.25 } };
   assert.deepEqual(
     cacheUsage([
       { type: "message", message: { role: "assistant", usage: usage as never } },
       { type: "message", message: { role: "user" } },
     ]),
-    { input: 10, cacheRead: 90, cost: 0.25, percent: 90 },
+    { input: 10, cacheRead: 90, cost: 0.25, tokens: 105, percent: 90 },
   );
 });
 
@@ -56,13 +56,12 @@ test("fits footer lines by evicting the lowest priority item", () => {
   assert.deepEqual(fit(items, 0).map((item) => item.text), ["high"]);
 });
 
-test("shortens workspace paths and picks a known context fill", () => {
+test("shortens workspace paths and derives context fill", () => {
   assert.equal(workspace("/Users/me/proj", "/Users/me"), "~/proj");
   assert.equal(workspace("/Users/me", "/Users/me"), "~");
   assert.equal(workspace("/tmp/x", "/Users/me"), "/tmp/x");
-  assert.deepEqual(contextFill({ tokens: 50_000, contextWindow: 200_000, percent: 25 }, 1), { tokens: 50_000, contextWindow: 200_000, percent: 25 });
-  assert.equal(contextFill({ tokens: null, contextWindow: 200_000, percent: null }, 1), undefined);
-  assert.equal(contextFill(undefined, 1), undefined);
+  assert.deepEqual(contextFill(50_000, 200_000), { tokens: 50_000, contextWindow: 200_000, percent: 25 });
+  assert.equal(contextFill(1_000, 0), undefined);
 });
 
 test("derives skill names and formats numbers", () => {

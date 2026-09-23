@@ -42,22 +42,23 @@ export function cacheUsage(entries: readonly Entry[]) {
   let input = 0;
   let cacheRead = 0;
   let cost = 0;
+  let tokens = 0;
   for (const entry of entries) {
     if (entry.type !== "message" || entry.message?.role !== "assistant" || !entry.message.usage) continue;
-    input += entry.message.usage.input;
-    cacheRead += entry.message.usage.cacheRead;
-    cost += entry.message.usage.cost?.total ?? 0;
+    const usage = entry.message.usage;
+    input += usage.input;
+    cacheRead += usage.cacheRead;
+    cost += usage.cost?.total ?? 0;
+    tokens += usage.totalTokens || usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
   }
   const total = input + cacheRead;
-  return { input, cacheRead, cost, percent: total ? (cacheRead / total) * 100 : 0 };
+  return { input, cacheRead, cost, tokens, percent: total ? (cacheRead / total) * 100 : 0 };
 }
 
-/** Context-window fill, from pi's own estimate (falls back to prompt tokens). */
-export function contextFill(estimate: { tokens: number | null; contextWindow: number; percent: number | null } | undefined, promptTokens: number) {
-  if (estimate?.percent !== null && estimate?.percent !== undefined) {
-    return { tokens: estimate.tokens ?? promptTokens, contextWindow: estimate.contextWindow, percent: estimate.percent };
-  }
-  return undefined;
+/** Context-window fill from the last request's token count. */
+export function contextFill(tokens: number, contextWindow: number) {
+  if (!contextWindow || contextWindow <= 0) return undefined;
+  return { tokens, contextWindow, percent: (tokens / contextWindow) * 100 };
 }
 
 export function loadedSkills(entries: readonly Entry[]) {
