@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, parseProviderUsage, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, usageText, workspace } from "./telemetry.ts";
+import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, workspace } from "./telemetry.ts";
 
 test("aggregates cache usage from assistant messages", () => {
   const usage = { input: 10, cacheRead: 90, totalTokens: 100, cost: { total: 0.25 } };
@@ -11,39 +11,6 @@ test("aggregates cache usage from assistant messages", () => {
     ]),
     { input: 10, cacheRead: 90, cost: 0.25, percent: 90 },
   );
-});
-
-test("parses supported provider quotas and rejects malformed values", () => {
-  assert.deepEqual(
-    parseProviderUsage("openai-codex", {
-      "x-codex-primary-used-percent": "21",
-      "x-codex-primary-window-minutes": "300",
-      "x-codex-secondary-used-percent": "8",
-      "x-codex-secondary-window-minutes": "10080",
-    }),
-    {
-      provider: "openai-codex",
-      windows: [
-        { label: "5h", usedPercent: 21 },
-        { label: "weekly", usedPercent: 8 },
-      ],
-    },
-  );
-  assert.equal(parseProviderUsage("anthropic", {
-    "anthropic-ratelimit-unified-5h-utilization": "nope",
-    "anthropic-ratelimit-unified-7d-utilization": "0.1",
-  }), undefined);
-  assert.deepEqual(parseProviderUsage("wally", {
-    "X-RateLimit-Limit-Requests": "100",
-    "X-RateLimit-Remaining-Requests": "25",
-    "X-RateLimit-Remaining-Tokens": "12000",
-  }), {
-    provider: "wally",
-    windows: [
-      { label: "req", usedPercent: 75 },
-      { label: "tok", remaining: 12000 },
-    ],
-  });
 });
 
 test("finds loaded skills and active MCP tools", () => {
@@ -99,13 +66,10 @@ test("shortens workspace paths and picks a known context fill", () => {
   assert.equal(contextFill(undefined, 1), undefined);
 });
 
-test("derives skill names, provider usage text and skill paths consistently", () => {
+test("derives skill names and formats numbers", () => {
   assert.equal(skillFromPath("/skills/ponytail/SKILL.md"), "ponytail");
   assert.equal(skillFromPath("C:\\x\\council\\SKILL.md"), "council");
   assert.equal(skillFromPath("/skills/README.md"), undefined);
-  assert.equal(usageText({ provider: "p", windows: [{ label: "5h", usedPercent: 21.4 }] }, "p"), "5h 21%");
-  assert.equal(usageText({ provider: "p", windows: [{ label: "tok", remaining: 12_000 }] }, "p"), "tok 12k left");
-  assert.equal(usageText(undefined, "openai-codex"), "SSE required");
   assert.equal(formatNumber(9_500), "9.5k");
 });
 

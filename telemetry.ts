@@ -2,8 +2,6 @@ import { homedir } from "node:os";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-export type ProviderUsageWindow = { label: string; usedPercent?: number; remaining?: number };
-export type ProviderUsage = { provider: string; windows: ProviderUsageWindow[] };
 export type Tone = "accent" | "success" | "warning";
 export type Item = { text: string; priority: number; tone: Tone };
 
@@ -27,13 +25,6 @@ export function workspace(cwd: string, home = homedir()) {
   return cwd === home ? "~" : cwd.startsWith(`${home}/`) ? `~/${cwd.slice(home.length + 1)}` : cwd;
 }
 
-export function usageText(usage: ProviderUsage | undefined, provider: string | undefined) {
-  if (!usage) return provider === "openai-codex" ? "SSE required" : "N/A";
-  return usage.windows.map((window) => window.usedPercent === undefined
-    ? `${window.label} ${formatNumber(window.remaining ?? 0)} left`
-    : `${window.label} ${Math.round(window.usedPercent)}%`).join(" · ");
-}
-
 type Entry = {
   type?: string;
   timestamp?: string;
@@ -46,52 +37,6 @@ type Entry = {
     content?: unknown;
   };
 };
-
-const number = (value: string | undefined) => {
-  if (!value?.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-export function parseProviderUsage(provider: string, rawHeaders: Record<string, string>): ProviderUsage | undefined {
-  const headers = Object.fromEntries(Object.entries(rawHeaders).map(([key, value]) => [key.toLowerCase(), value]));
-  if (provider === "openai-codex") {
-    const windows: ProviderUsageWindow[] = [];
-    for (const name of ["primary", "secondary"] as const) {
-      const used = number(headers[`x-codex-${name}-used-percent`]);
-      if (used === undefined || used < 0 || used > 100) continue;
-      const minutes = number(headers[`x-codex-${name}-window-minutes`]);
-      const label = minutes === 300 ? "5h" : minutes === 10_080 ? "weekly" : minutes ? `${minutes}m` : name;
-      windows.push({ label, usedPercent: used });
-    }
-    return windows.length ? { provider, windows } : undefined;
-  }
-
-  if (provider === "anthropic") {
-    const fiveHour = number(headers["anthropic-ratelimit-unified-5h-utilization"]);
-    const sevenDay = number(headers["anthropic-ratelimit-unified-7d-utilization"]);
-    if (fiveHour !== undefined && sevenDay !== undefined && fiveHour >= 0 && fiveHour <= 1 && sevenDay >= 0 && sevenDay <= 1) {
-      return {
-        provider,
-        windows: [
-          { label: "5h", usedPercent: fiveHour * 100 },
-          { label: "7d", usedPercent: sevenDay * 100 },
-        ],
-      };
-    }
-  }
-
-  const windows: ProviderUsageWindow[] = [];
-  for (const [label, suffix] of [["req", "requests"], ["tok", "tokens"]] as const) {
-    const limit = number(headers[`x-ratelimit-limit-${suffix}`] ?? headers[`ratelimit-limit-${suffix}`]);
-    const remaining = number(headers[`x-ratelimit-remaining-${suffix}`] ?? headers[`ratelimit-remaining-${suffix}`]);
-    if (remaining === undefined || remaining < 0) continue;
-    windows.push(limit && limit > 0
-      ? { label, usedPercent: Math.max(0, Math.min(100, ((limit - remaining) / limit) * 100)) }
-      : { label, remaining });
-  }
-  return windows.length ? { provider, windows } : undefined;
-}
 
 export function cacheUsage(entries: readonly Entry[]) {
   let input = 0;

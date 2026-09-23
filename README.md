@@ -1,10 +1,10 @@
 # pi-minimalist-hud
 
-A compact, two-line telemetry footer for [Pi](https://pi.dev). Everything you need while a session is running — token usage, context fill, cost, provider quota, token speed, workspace, model, skills, MCP tools — without stealing vertical space.
+A compact, two-line telemetry footer for [Pi](https://pi.dev). Everything you need while a session is running — token usage, context fill, cost, token speed, workspace, model, skills, MCP tools — without stealing vertical space.
 
 ```
 🔢 TOKEN/CACHE 1.2M/10.4M (88%)  │  🧠 CTX 42.1k/200k (21%)  │  🧭 MODE PLAN  │  ⚡ SPEED 62 tok/s
-📁 ~/Projects/api (main)  │  💰 $0.418  │  🤖 anthropic/claude-sonnet-4-5  │  ⏳ LIMIT 5h 21% · 7d 8%  │  🕒 12m 4s  │  🧩 SKILL ponytail
+📁 ~/Projects/api (main)  │  💰 $0.418  │  🤖 anthropic/claude-sonnet-4-5  │  🕒 12m 4s  │  🧩 SKILL ponytail
 ```
 
 Items whose priority is too low to fit the current terminal width are dropped automatically, so the HUD degrades gracefully instead of wrapping.
@@ -32,20 +32,9 @@ pi --extension ./index.ts
 | `COST` | Accumulated session cost, summed from per-message usage reported by the provider. |
 | `MODE` | `PLAN` / `VIBE`. Reads [`@narumitw/pi-plan-mode`](https://www.npmjs.com/package/@narumitw/pi-plan-mode) state, falling back to that extension's live status. Shows `MODE ?` when plan mode is not installed at all, rather than guessing. |
 | `SPEED` | Rolling output tokens/second over a 2-second window, from streamed deltas. |
-| `LIMIT` | Provider quota windows, when response headers expose them. |
 | `WORKSPACE` | `$HOME`-relative working directory, plus the current Git branch. |
 | `SKILL` | Skills whose `SKILL.md` was read through Pi's `read` tool in the active session. |
 | `MCP` | Count of active MCP tools, inferred from tool name and source metadata. |
-
-## Provider quota
-
-Quota is read from response headers and only shown when the provider exposes them:
-
-- **Codex** — `x-codex-{primary,secondary}-used-percent` subscription windows. Requires SSE transport.
-- **Anthropic (OAuth)** — `anthropic-ratelimit-unified-{5h,7d}-utilization`.
-- **Generic** — `x-ratelimit-{limit,remaining}-{requests,tokens}`, used by some custom providers.
-
-Providers without quota headers (Antigravity, most custom endpoints) show `LIMIT N/A`. Anthropic API-key sessions are skipped deliberately, since those have no subscription window.
 
 ## Development
 
@@ -60,6 +49,7 @@ Pure logic lives in `telemetry.ts` and is covered by `telemetry.test.ts`. `index
 ## Limitations
 
 - The `MCP` count is a heuristic over tool name and source path; a non-MCP tool with `mcp` in its metadata can be counted. It appears only when the count is non-zero.
+- Provider quota windows are deliberately not shown: every provider exposes them differently, and a row that is meaningless or wrong on half the providers costs more attention than it earns. Use `/usage` or the provider's own dashboard when you need it.
 - Token speed is estimated from `chars / 4` until the provider reports real output tokens for the message.
 - `SKILL` reflects skills read in the current session, not every skill installed.
 

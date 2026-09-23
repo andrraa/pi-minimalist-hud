@@ -1,6 +1,6 @@
 {
   "name": "@mrwyck/pi-minimalist-hud",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Compact two-line telemetry HUD for Pi: tokens, context, cost, quota, speed",
   "type": "module",
   "license": "MIT",
@@ -13,10 +13,21 @@
   "bugs": {
     "url": "https://github.com/andrraa/pi-minimalist-hud/issues"
   },
-  "keywords": ["pi-package", "pi-extension", "hud", "footer"],
-  "files": ["index.ts", "telemetry.ts", "README.md"],
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "hud",
+    "footer"
+  ],
+  "files": [
+    "index.ts",
+    "telemetry.ts",
+    "README.md"
+  ],
   "pi": {
-    "extensions": ["./index.ts"]
+    "extensions": [
+      "./index.ts"
+    ]
   },
   "scripts": {
     "test": "node --experimental-strip-types --test telemetry.test.ts",

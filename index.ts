@@ -1,11 +1,10 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
-import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, parseProviderUsage, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, usageText, workspace, type Item, type ProviderUsage } from "./telemetry.ts";
+import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, workspace, type Item } from "./telemetry.ts";
 
 export default function piHud(pi: ExtensionAPI) {
   const speed = new TokenSpeed();
-  let providerUsage: ProviderUsage | undefined;
   let cache = { input: 0, cacheRead: 0, cost: 0, percent: 0 };
   let skills = new Set<string>();
   let startedAt = Date.now();
@@ -27,7 +26,6 @@ export default function piHud(pi: ExtensionAPI) {
     cache = cacheUsage(branch);
     skills = new Set(loadedSkills(branch));
     startedAt = sessionStartedAt(branch);
-    providerUsage = undefined;
     speed.stop();
   };
 
@@ -55,7 +53,6 @@ export default function piHud(pi: ExtensionAPI) {
           const known = planActive !== undefined || persistedMode !== undefined;
           const gitBranch = footerData.getGitBranch();
           const model = ctx.model;
-          const matchingUsage = providerUsage?.provider === model?.provider ? providerUsage : undefined;
           const mcpCount = mcpToolCount(pi.getActiveTools(), pi.getAllTools());
           const speedText = speed.value === undefined ? "—" : speed.value < 100 ? speed.value.toFixed(1) : String(Math.round(speed.value));
 
@@ -72,7 +69,6 @@ export default function piHud(pi: ExtensionAPI) {
             { text: `📁 ${workspace(ctx.cwd)}${gitBranch ? ` (${gitBranch})` : ""}`, priority: 20, tone: "success" },
             { text: `💰 $${cache.cost.toFixed(cache.cost < 10 ? 3 : 2)}`, priority: 45, tone: "accent" },
             { text: `🤖 ${model ? `${model.provider}/${model.id}` : "no model"}`, priority: 100, tone: "accent" },
-            { text: `⏳ LIMIT ${usageText(matchingUsage, model?.provider)}`, priority: 70, tone: "warning" },
             { text: `🕒 ${formatDuration(Date.now() - startedAt)}`, priority: 60, tone: "success" },
             { text: `🧩 SKILL ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
             ...(mcpCount ? [{ text: `🔌 MCP ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
@@ -94,7 +90,6 @@ export default function piHud(pi: ExtensionAPI) {
     requestRender?.();
   });
   pi.on("model_select", (_event, ctx) => {
-    providerUsage = undefined;
     if (ctx.mode === "tui") requestRender?.();
   });
   pi.on("thinking_level_select", () => requestRender?.());
@@ -133,14 +128,6 @@ export default function piHud(pi: ExtensionAPI) {
     requestRender?.();
   });
 
-  pi.on("after_provider_response", (event, ctx) => {
-    const provider = ctx.model?.provider;
-    if (!provider) return;
-    if (provider === "anthropic" && ctx.model && !ctx.modelRegistry.isUsingOAuth(ctx.model)) return;
-    providerUsage = parseProviderUsage(provider, event.headers);
-    requestRender?.();
-  });
-
   pi.on("turn_end", () => requestRender?.());
 
   pi.on("session_shutdown", (_event, ctx) => {
@@ -149,7 +136,6 @@ export default function piHud(pi: ExtensionAPI) {
     renderTimer = undefined;
     clockTimer = undefined;
     requestRender = undefined;
-    providerUsage = undefined;
     speed.stop();
     if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   });
