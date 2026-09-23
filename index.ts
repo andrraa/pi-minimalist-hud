@@ -8,6 +8,7 @@ export default function piHud(pi: ExtensionAPI) {
   let cache = { input: 0, cacheRead: 0, cost: 0, tokens: 0, percent: 0 };
   let skills = new Set<string>();
   let startedAt = Date.now();
+  let planMode: boolean | undefined;
   let requestRender: (() => void) | undefined;
   let renderTimer: ReturnType<typeof setTimeout> | undefined;
   let clockTimer: ReturnType<typeof setInterval> | undefined;
@@ -21,11 +22,18 @@ export default function piHud(pi: ExtensionAPI) {
     renderTimer.unref?.();
   };
 
+  /** Persisted plan-mode state, or undefined when the extension has never run. */
+  const readPlanMode = (ctx: ExtensionContext) => {
+    const stored = sessionMode(ctx.sessionManager.getBranch());
+    return stored === undefined ? undefined : stored === "PLAN";
+  };
+
   const resetSession = (ctx: ExtensionContext) => {
     const branch = ctx.sessionManager.getBranch();
     cache = cacheUsage(branch);
     skills = new Set(loadedSkills(branch));
     startedAt = sessionStartedAt(branch);
+    planMode = readPlanMode(ctx);
     speed.stop();
   };
 
@@ -38,7 +46,10 @@ export default function piHud(pi: ExtensionAPI) {
 
     ctx.ui.setFooter((tui, theme, footerData) => {
       requestRender = () => tui.requestRender();
-      const unsubscribe = footerData.onBranchChange(() => requestRender?.());
+      const unsubscribe = footerData.onBranchChange(() => {
+        planMode = readPlanMode(ctx);
+        requestRender?.();
+      });
       return {
         invalidate() {},
         dispose() {
@@ -46,11 +57,9 @@ export default function piHud(pi: ExtensionAPI) {
           requestRender = undefined;
         },
         render(width: number) {
-          const branch = ctx.sessionManager.getBranch();
-          const persistedMode = sessionMode(branch);
           const planActive = planModeFromStatus(footerData.getExtensionStatuses());
-          const mode = planActive ?? (persistedMode === "PLAN");
-          const known = planActive !== undefined || persistedMode !== undefined;
+          const mode = planActive ?? (planMode === true);
+          const known = planActive !== undefined || planMode !== undefined;
           const gitBranch = footerData.getGitBranch();
           const model = ctx.model;
           const mcpCount = mcpToolCount(pi.getActiveTools());
@@ -85,10 +94,7 @@ export default function piHud(pi: ExtensionAPI) {
   };
 
   pi.on("session_start", (_event, ctx) => installFooter(ctx));
-  pi.on("session_tree", (_event, ctx) => {
-    resetSession(ctx);
-    requestRender?.();
-  });
+  pi.on("session_tree", (_event, ctx) => resetSession(ctx));
   pi.on("model_select", (_event, ctx) => {
     if (ctx.mode === "tui") requestRender?.();
   });
