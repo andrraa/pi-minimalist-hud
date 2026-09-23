@@ -1,0 +1,156 @@
+import type { AssistantMessage } from "@earendil-works/pi-ai";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth } from "@earendil-works/pi-tui";
+import { cacheUsage, contextFill, fit, formatDuration, formatNumber, loadedSkills, mcpToolCount, parseProviderUsage, planModeFromStatus, sessionMode, sessionStartedAt, skillFromPath, TokenSpeed, usageText, workspace, type Item, type ProviderUsage } from "./telemetry.ts";
+
+export default function piHud(pi: ExtensionAPI) {
+  const speed = new TokenSpeed();
+  let providerUsage: ProviderUsage | undefined;
+  let cache = { input: 0, cacheRead: 0, cost: 0, percent: 0 };
+  let skills = new Set<string>();
+  let startedAt = Date.now();
+  let requestRender: (() => void) | undefined;
+  let renderTimer: ReturnType<typeof setTimeout> | undefined;
+  let clockTimer: ReturnType<typeof setInterval> | undefined;
+
+  const renderSoon = () => {
+    if (!requestRender || renderTimer) return;
+    renderTimer = setTimeout(() => {
+      renderTimer = undefined;
+      requestRender?.();
+    }, 50);
+    renderTimer.unref?.();
+  };
+
+  const resetSession = (ctx: ExtensionContext) => {
+    const branch = ctx.sessionManager.getBranch();
+    cache = cacheUsage(branch);
+    skills = new Set(loadedSkills(branch));
+    startedAt = sessionStartedAt(branch);
+    providerUsage = undefined;
+    speed.stop();
+  };
+
+  const installFooter = (ctx: ExtensionContext) => {
+    if (ctx.mode !== "tui") return;
+    resetSession(ctx);
+    if (clockTimer) clearInterval(clockTimer);
+    clockTimer = setInterval(() => requestRender?.(), 1_000);
+    clockTimer.unref?.();
+
+    ctx.ui.setFooter((tui, theme, footerData) => {
+      requestRender = () => tui.requestRender();
+      const unsubscribe = footerData.onBranchChange(() => requestRender?.());
+      return {
+        invalidate() {},
+        dispose() {
+          unsubscribe();
+          requestRender = undefined;
+        },
+        render(width: number) {
+          const branch = ctx.sessionManager.getBranch();
+          const persistedMode = sessionMode(branch);
+          const planActive = planModeFromStatus(footerData.getExtensionStatuses());
+          const mode = planActive ?? (persistedMode === "PLAN");
+          const known = planActive !== undefined || persistedMode !== undefined;
+          const gitBranch = footerData.getGitBranch();
+          const model = ctx.model;
+          const matchingUsage = providerUsage?.provider === model?.provider ? providerUsage : undefined;
+          const mcpCount = mcpToolCount(pi.getActiveTools(), pi.getAllTools());
+          const speedText = speed.value === undefined ? "—" : speed.value < 100 ? speed.value.toFixed(1) : String(Math.round(speed.value));
+
+          const promptTokens = cache.input + cache.cacheRead;
+          const fill = contextFill(ctx.getContextUsage(), promptTokens);
+          const first = fit([
+            { text: `🔢 TOKEN/CACHE ${formatNumber(cache.input)}/${formatNumber(promptTokens)} (${Math.round(cache.percent)}%)`, priority: 95, tone: "accent" },
+            ...(fill ? [{ text: `🧠 CTX ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)`, priority: fill.percent >= 75 ? 115 : 75, tone: fill.percent >= 75 ? "warning" as const : "success" as const }] : []),
+            { text: `🧠 THINK ${pi.getThinkingLevel()}`, priority: 100, tone: "warning" },
+            { text: `${!known ? "❔" : mode ? "🧭" : "✨"} MODE ${!known ? "?" : mode ? "PLAN" : "VIBE"}`, priority: 110, tone: mode ? "accent" : "success" },
+            { text: `⚡ SPEED ${speedText} tok/s`, priority: 80, tone: "success" },
+          ], width);
+          const second = fit([
+            { text: `📁 ${workspace(ctx.cwd)}${gitBranch ? ` (${gitBranch})` : ""}`, priority: 20, tone: "success" },
+            { text: `💰 $${cache.cost.toFixed(cache.cost < 10 ? 3 : 2)}`, priority: 45, tone: "accent" },
+            { text: `🤖 ${model ? `${model.provider}/${model.id}` : "no model"}`, priority: 100, tone: "accent" },
+            { text: `⏳ LIMIT ${usageText(matchingUsage, model?.provider)}`, priority: 70, tone: "warning" },
+            { text: `🕒 ${formatDuration(Date.now() - startedAt)}`, priority: 60, tone: "success" },
+            { text: `🧩 SKILL ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
+            ...(mcpCount ? [{ text: `🔌 MCP ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
+          ], width);
+          const renderLine = (items: Item[]) => truncateToWidth(
+            items.map((item) => theme.fg(item.tone, item.text)).join(theme.fg("dim", "  │  ")),
+            width,
+          );
+
+          return [renderLine(first), renderLine(second)];
+        },
+      };
+    });
+  };
+
+  pi.on("session_start", (_event, ctx) => installFooter(ctx));
+  pi.on("session_tree", (_event, ctx) => {
+    resetSession(ctx);
+    requestRender?.();
+  });
+  pi.on("model_select", (_event, ctx) => {
+    providerUsage = undefined;
+    if (ctx.mode === "tui") requestRender?.();
+  });
+  pi.on("thinking_level_select", () => requestRender?.());
+  pi.on("tool_call", (event) => {
+    if (event.toolName !== "read") return;
+    const path = (event.input as { path?: unknown }).path;
+    if (typeof path !== "string") return;
+    const name = skillFromPath(path);
+    if (name) {
+      skills.add(name);
+      requestRender?.();
+    }
+  });
+
+  pi.on("message_start", (event) => {
+    if (event.message.role === "assistant") speed.start();
+  });
+
+  pi.on("message_update", (event) => {
+    if (event.message.role !== "assistant") return;
+    const update = event.assistantMessageEvent;
+    if (update.type !== "text_delta" && update.type !== "thinking_delta" && update.type !== "toolcall_delta") return;
+    speed.update(update.delta, update.partial.usage?.output);
+    renderSoon();
+  });
+
+  pi.on("message_end", (event) => {
+    if (event.message.role !== "assistant") return;
+    const usage = (event.message as AssistantMessage).usage;
+    cache.input += usage.input;
+    cache.cacheRead += usage.cacheRead;
+    cache.cost += usage.cost?.total ?? 0;
+    const total = cache.input + cache.cacheRead;
+    cache.percent = total ? (cache.cacheRead / total) * 100 : 0;
+    speed.stop();
+    requestRender?.();
+  });
+
+  pi.on("after_provider_response", (event, ctx) => {
+    const provider = ctx.model?.provider;
+    if (!provider) return;
+    if (provider === "anthropic" && ctx.model && !ctx.modelRegistry.isUsingOAuth(ctx.model)) return;
+    providerUsage = parseProviderUsage(provider, event.headers);
+    requestRender?.();
+  });
+
+  pi.on("turn_end", () => requestRender?.());
+
+  pi.on("session_shutdown", (_event, ctx) => {
+    if (renderTimer) clearTimeout(renderTimer);
+    if (clockTimer) clearInterval(clockTimer);
+    renderTimer = undefined;
+    clockTimer = undefined;
+    requestRender = undefined;
+    providerUsage = undefined;
+    speed.stop();
+    if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
+  });
+}

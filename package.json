@@ -1,0 +1,36 @@
+{
+  "name": "pi-minimalist-hud",
+  "version": "0.1.0",
+  "description": "Compact two-line telemetry HUD for Pi: tokens, context, cost, quota, speed",
+  "type": "module",
+  "license": "MIT",
+  "author": "andrra",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrraa/pi-minimalist-hud.git"
+  },
+  "homepage": "https://github.com/andrraa/pi-minimalist-hud#readme",
+  "bugs": {
+    "url": "https://github.com/andrraa/pi-minimalist-hud/issues"
+  },
+  "keywords": ["pi-package", "pi-extension", "hud", "footer"],
+  "files": ["index.ts", "telemetry.ts", "README.md"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test telemetry.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.86.0",
+    "@earendil-works/pi-coding-agent": ">=0.86.0",
+    "@earendil-works/pi-tui": ">=0.86.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.86.0",
+    "@earendil-works/pi-coding-agent": "^0.86.0",
+    "@earendil-works/pi-tui": "^0.86.0",
+    "typescript": "^5.9.0"
+  }
+}
