@@ -1,5 +1,5 @@
 {
-  "name": "pi-minimalist-hud",
+  "name": "@mrwyck/pi-minimalist-hud",
   "version": "0.1.0",
   "description": "Compact two-line telemetry HUD for Pi: tokens, context, cost, quota, speed",
   "type": "module",
@@ -20,7 +20,11 @@
   },
   "scripts": {
     "test": "node --experimental-strip-types --test telemetry.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm test && npm run typecheck"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=0.86.0",

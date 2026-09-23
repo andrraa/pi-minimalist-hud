@@ -12,7 +12,7 @@ Items whose priority is too low to fit the current terminal width are dropped au
 ## Install
 
 ```bash
-pi install npm:pi-minimalist-hud
+pi install npm:@mrwyck/pi-minimalist-hud
 ```
 
 From a local checkout:
