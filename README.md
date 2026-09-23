@@ -63,6 +63,19 @@ Pure logic lives in `telemetry.ts` and is covered by `telemetry.test.ts`. `index
 - Token speed is estimated from `chars / 4` until the provider reports real output tokens for the message.
 - `SKILL` reflects skills read in the current session, not every skill installed.
 
+## Releasing
+
+Publishing is automated by `.github/workflows/publish.yml` on version tags, using npm trusted publishing (OIDC — no `NPM_TOKEN` secret to rotate):
+
+```bash
+npm version 0.2.0 --no-git-tag-version
+git commit -am "chore: release 0.2.0"
+git tag v0.2.0
+git push && git push --tags
+```
+
+One-time setup: on npmjs.com, open the package → **Settings → Trusted Publisher → GitHub Actions**, and set repository `andrraa/pi-minimalist-hud`, workflow `publish.yml`. The workflow refuses to publish if the tag and `package.json` version disagree.
+
 ## License
 
 MIT
