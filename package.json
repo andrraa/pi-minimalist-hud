@@ -1,6 +1,6 @@
 {
   "name": "@mrwyck/pi-minimalist-hud",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Compact two-line telemetry HUD for Pi: tokens, context, cost, quota, speed",
   "type": "module",
   "license": "MIT",
