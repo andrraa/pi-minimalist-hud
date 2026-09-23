@@ -21,10 +21,9 @@ test("finds loaded skills and active MCP tools", () => {
       content: [{ type: "toolCall", name: "read", arguments: { path: "/skills/ponytail/SKILL.md" } }],
     },
   }]), ["ponytail"]);
-  assert.equal(mcpToolCount(["github_search", "read"], [
-    { name: "github_search", sourceInfo: { path: "/extensions/mcp-github.ts", source: "mcp-github" } },
-    { name: "read", sourceInfo: { path: "builtin", source: "builtin" } },
-  ]), 1);
+  assert.equal(mcpToolCount(["github_search", "read"]), 0);
+  assert.equal(mcpToolCount(["mcp__github__search", "read", "github-mcp"]), 2);
+  assert.equal(mcpToolCount([]), 0);
 });
 
 test("formats elapsed session usage", () => {

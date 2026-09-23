@@ -53,7 +53,7 @@ export default function piHud(pi: ExtensionAPI) {
           const known = planActive !== undefined || persistedMode !== undefined;
           const gitBranch = footerData.getGitBranch();
           const model = ctx.model;
-          const mcpCount = mcpToolCount(pi.getActiveTools(), pi.getAllTools());
+          const mcpCount = mcpToolCount(pi.getActiveTools());
           const speedText = speed.value === undefined ? "—" : speed.value < 100 ? speed.value.toFixed(1) : String(Math.round(speed.value));
 
           const promptTokens = cache.input + cache.cacheRead;
@@ -71,7 +71,7 @@ export default function piHud(pi: ExtensionAPI) {
             { text: `🤖 ${model ? `${model.provider}/${model.id}` : "no model"}`, priority: 100, tone: "accent" },
             { text: `🕒 ${formatDuration(Date.now() - startedAt)}`, priority: 60, tone: "success" },
             { text: `🧩 SKILL ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
-            ...(mcpCount ? [{ text: `🔌 MCP ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
+            ...(mcpCount ? [{ text: `🔌 ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
           ], width);
           const renderLine = (items: Item[]) => truncateToWidth(
             items.map((item) => theme.fg(item.tone, item.text)).join(theme.fg("dim", "  │  ")),

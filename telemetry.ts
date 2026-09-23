@@ -77,12 +77,8 @@ export function loadedSkills(entries: readonly Entry[]) {
   return [...skills];
 }
 
-export function mcpToolCount(
-  activeNames: readonly string[],
-  tools: readonly { name: string; sourceInfo: { path: string; source: string } }[],
-) {
-  const active = new Set(activeNames);
-  return tools.filter((tool) => active.has(tool.name) && /(?:^|[^a-z])mcp(?:[^a-z]|$)/i.test(`${tool.name} ${tool.sourceInfo.path} ${tool.sourceInfo.source}`)).length;
+export function mcpToolCount(activeNames: readonly string[]) {
+  return activeNames.filter((name) => /(?:^|[^a-z])mcp(?:[^a-z]|$)/i.test(name)).length;
 }
 
 export function sessionStartedAt(entries: readonly Entry[], fallback = Date.now()) {
