@@ -65,7 +65,6 @@ export default function piHud(pi: ExtensionAPI) {
           const mcpCount = mcpToolCount(pi.getActiveTools());
           const speedText = speed.value === undefined ? "—" : speed.value < 100 ? speed.value.toFixed(1) : String(Math.round(speed.value));
 
-          const promptTokens = cache.input + cache.cacheRead;
           const fill = model ? contextFill(cache.tokens, model.contextWindow) : undefined;
           const ctxTone = !fill || fill.percent < 60 ? "success" : fill.percent < 85 ? "warning" : "error";
           const first = fit([
