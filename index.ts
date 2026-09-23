@@ -82,7 +82,7 @@ export default function piHud(pi: ExtensionAPI) {
             { text: `💰 $${cache.cost.toFixed(2)}`, priority: 45, tone: "accent" },
             { text: `🤖 ${model ? `${model.provider}/${model.id}` : "no model"}`, priority: 100, tone: "accent" },
             { text: `🕒 ${formatDuration(Date.now() - startedAt)}`, priority: 60, tone: "success" },
-            { text: `🧩 ${skills.size ? [...skills].join(",") : "—"}`, priority: 40, tone: "accent" },
+            ...(skills.size ? [{ text: `🧩 ${[...skills].join(",")}`, priority: 40, tone: "accent" as const }] : []),
             ...(mcpCount ? [{ text: `🔌 ${mcpCount}`, priority: 50, tone: "warning" as const }] : []),
           ], width);
           const renderLine = (items: Item[]) => truncateToWidth(

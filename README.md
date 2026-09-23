@@ -37,7 +37,7 @@ pi --extension ./index.ts
 | `🧠` | Active thinking level. |
 | `📁` | Project directory name plus the current Git branch — not the full path, which does not change and does not fit. |
 | `🕒` | Elapsed session time. |
-| `🧩` | Skills whose `SKILL.md` was read through Pi's `read` tool in the active session. |
+| `🧩` | Skills whose `SKILL.md` was read through Pi's `read` tool in the active session. Hidden when none have been loaded. |
 | `🔌` | Count of active MCP tools, inferred from tool names. |
 
 ## Development
