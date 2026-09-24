@@ -32,7 +32,7 @@ pi --extension ./index.ts
 | `🔢` | Cache-hit rate — the share of prompt tokens the provider served from cache. `88% cache` is the number that actually varies; raw uncached/total counts are available in `/usage`. |
 | `📦` | Context-window fill for the active model. Turns yellow past 60% and red past 85%, and gains a `!` at 90% — the signal to `/compact`. |
 | `💰` | Accumulated session cost, summed from per-message usage reported by the provider. |
-| `🧭` | `PLAN` / `VIBE`. Reads [`@narumitw/pi-plan-mode`](https://www.npmjs.com/package/@narumitw/pi-plan-mode) state, falling back to that extension's live status. Shows `?` when plan mode is not installed at all, rather than guessing. |
+| `🧭` | `PLAN` / `VIBE`. Reads [`@narumitw/pi-plan-mode`](https://www.npmjs.com/package/@narumitw/pi-plan-mode) state, falling back to that extension's live status. Falls back to `VIBE` whenever no signal is present (extension missing, or installed but idle before its first status update). |
 | `⚡` | Rolling output tokens/second over a 2-second window, from streamed deltas. |
 | `🧠` | Active thinking level. |
 | `📁` | Project directory name plus the current Git branch — not the full path, which does not change and does not fit. |

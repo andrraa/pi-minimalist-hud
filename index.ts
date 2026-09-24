@@ -62,7 +62,6 @@ export default function piHud(pi: ExtensionAPI) {
         render(width: number) {
           const planActive = planModeFromStatus(footerData.getExtensionStatuses());
           const mode = planActive ?? (planMode === true);
-          const known = planActive !== undefined || planMode !== undefined;
           const gitBranch = footerData.getGitBranch();
           const model = ctx.model;
           const mcpCount = mcpToolCount(pi.getActiveTools());
@@ -71,7 +70,7 @@ export default function piHud(pi: ExtensionAPI) {
           const fill = model ? contextFill(cache.tokens, model.contextWindow) : undefined;
           const ctxTone = !fill || fill.percent < 60 ? "success" : fill.percent < 85 ? "warning" : "error";
           const first = fit([
-            { text: `🧭 ${known ? (mode ? "PLAN" : "VIBE") : "?"}`, priority: 110, tone: mode ? "accent" : "success" },
+            { text: `🧭 ${mode ? "PLAN" : "VIBE"}`, priority: 110, tone: mode ? "accent" : "success" },
             { text: `🧠 ${pi.getThinkingLevel()}`, priority: 100, tone: "warning" },
             ...(fill ? [{ text: `📦 ${formatNumber(fill.tokens)}/${formatNumber(fill.contextWindow)} (${Math.round(fill.percent)}%)${fill.percent >= CONTEXT_ALERT_PERCENT ? " !" : ""}`, priority: fill.percent >= 75 ? 115 : 75, tone: ctxTone as Item["tone"] }] : []),
             { text: `⚡ ${speedText} tok/s`, priority: 80, tone: "success" },
